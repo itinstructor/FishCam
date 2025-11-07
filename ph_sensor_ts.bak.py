@@ -16,23 +16,32 @@ Dependencies (on Raspberry Pi):
 pip install smbus2
 """
 
+# Import the 'time' module - allows us to add delays and get timestamps
 import time
+# Import the 'logging' module - helps us record what the program is doing
 import logging
+# Import the 'os' module - lets us work with files and folders
 import os
+# Import the 'sys' module - gives us access to system-specific functions
 import sys
+# Import TimedRotatingFileHandler - creates log files that automatically rotate daily
 from logging.handlers import TimedRotatingFileHandler
-import statistics
 
+# Import the 'statistics' module - provides mathematical functions like mean (average)
+import statistics
 # Import type hints - helps document what type of data functions expect and return
 from typing import List, Optional
-
 # Import the 'json' module - lets us read and write JSON configuration files
 import json
 
-SENSOR_CHANNEL = 0  # Which input pin on Grove Base Hat 0 = A0 (A1, A2, etc.)
+# Configuration constants (values that don't change during program execution)
+# SENSOR_CHANNEL: tells us which pin on the Grove Base Hat the pH sensor is connected to (0 = A0)
+SENSOR_CHANNEL = 0  # Which input pin on Grove Base Hat (A0, A1, A2, etc.)
+# SAMPLING_INTERVAL: how long to wait between sensor readings (0.02 seconds = 20 milliseconds)
 SAMPLING_INTERVAL = (
     0.02  # How often to read sensor (0.02 seconds = 20 milliseconds)
 )
+# ARRAY_LENGTH: how many individual readings to collect before calculating an average
 ARRAY_LENGTH = 40  # How many readings to average together for stability
 
 # Calibration and ADC constants (defaults)
@@ -55,7 +64,6 @@ LAST_CALIB_PATH: str | None = None
 # Print a message showing where this module file is located (helpful for debugging)
 print(f"[PH] Module loaded from: {os.path.abspath(__file__)}")  # always prints
 
-
 def load_calibration(config_path: str | None = None):
     """Load calibration values from JSON file and calculate slope/offset."""
     # The 'global' keyword lets us modify variables that exist outside this function
@@ -77,21 +85,15 @@ def load_calibration(config_path: str | None = None):
             config_path = env_path  # Use that path
         else:
             # Otherwise, look for the calibration file in the same folder as this script
-            script_dir = os.path.dirname(
-                os.path.abspath(__file__)
-            )  # Get the script's folder
-            config_path = os.path.join(
-                script_dir, "ph_calibration.json"
-            )  # Build the file path
+            script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the script's folder
+            config_path = os.path.join(script_dir, "ph_calibration.json")  # Build the file path
 
     # The 'try' block attempts to run code that might fail (like opening a file)
     try:
         # Remember which calibration file we're using
         LAST_CALIB_PATH = config_path
         # Print the full path to the calibration file we're loading
-        print(
-            f"[PH] Using calibration file: {os.path.abspath(config_path)}"
-        )  # always prints
+        print(f"[PH] Using calibration file: {os.path.abspath(config_path)}")  # always prints
         # Also log this information to the log file
         _log.info(f"Loading calibration from: {config_path}")
         # Open the JSON file in read mode ("r") with UTF-8 encoding
@@ -102,9 +104,7 @@ def load_calibration(config_path: str | None = None):
         # If the JSON file has old PH_SLOPE/PH_OFFSET values, warn that we'll ignore them
         # We recalculate these from the voltage measurements instead
         if "PH_SLOPE" in data or "PH_OFFSET" in data:
-            _log.warning(
-                "Ignoring PH_SLOPE/PH_OFFSET in JSON; recomputing from voltages."
-            )
+            _log.warning("Ignoring PH_SLOPE/PH_OFFSET in JSON; recomputing from voltages.")
 
         # Load V_REF and ADC_MAX from the file if they exist, otherwise keep the defaults
         # The .get() method returns the value if the key exists, or the default (2nd argument) if not
@@ -112,22 +112,12 @@ def load_calibration(config_path: str | None = None):
         ADC_MAX = float(data.get("ADC_MAX", ADC_MAX))  # Maximum ADC value
 
         # Try to get the voltage measurements for each calibration buffer solution
-        ph_4_voltage = data.get(
-            "PH_4_VOLTAGE"
-        )  # Voltage when sensor was in pH 4 buffer
-        ph_7_voltage = data.get(
-            "PH_7_VOLTAGE"
-        )  # Voltage when sensor was in pH 7 buffer
-        ph_10_voltage = data.get(
-            "PH_10_VOLTAGE"
-        )  # Voltage when sensor was in pH 10 buffer
+        ph_4_voltage = data.get("PH_4_VOLTAGE")  # Voltage when sensor was in pH 4 buffer
+        ph_7_voltage = data.get("PH_7_VOLTAGE")  # Voltage when sensor was in pH 7 buffer
+        ph_10_voltage = data.get("PH_10_VOLTAGE")  # Voltage when sensor was in pH 10 buffer
 
         # If all three calibration voltages are present (not None), calculate the calibration
-        if (
-            ph_4_voltage is not None
-            and ph_7_voltage is not None
-            and ph_10_voltage is not None
-        ):
+        if ph_4_voltage is not None and ph_7_voltage is not None and ph_10_voltage is not None:
             # Convert the voltages from whatever type they are to floating-point numbers
             v4 = float(ph_4_voltage)  # Voltage at pH 4
             v7 = float(ph_7_voltage)  # Voltage at pH 7
@@ -139,30 +129,24 @@ def load_calibration(config_path: str | None = None):
             # Calculate the slope (how pH changes with voltage) in pH per millivolt
             eps = 1e-12  # A tiny number to prevent division by zero
             # Calculate slope from pH 4 to pH 7: change in pH / change in voltage in mV
-            s1_mV = (7.0 - 4.0) / ((v7 - v4 + eps) * 1000.0)  # pH/mV
+            s1_mV = (7.0 - 4.0) / ((v7 - v4 + eps) * 1000.0)   # pH/mV
             # Calculate slope from pH 7 to pH 10: change in pH / change in voltage in mV
-            s2_mV = (10.0 - 7.0) / ((v10 - v7 + eps) * 1000.0)  # pH/mV
+            s2_mV = (10.0 - 7.0) / ((v10 - v7 + eps) * 1000.0) # pH/mV
             # Average the two slopes to get our final calibration slope
-            PH_SLOPE = (s1_mV + s2_mV) / 2.0  # pH/mV
+            PH_SLOPE = (s1_mV + s2_mV) / 2.0                   # pH/mV
 
             # Since we centered at pH 7, the offset is exactly 7.0
             PH_OFFSET = 7.0
 
             # Safety check: if the slope value is unrealistically large, it might be in wrong units
             # abs() returns the absolute value (removes negative sign for comparison)
-            if (
-                abs(PH_SLOPE) > 0.5
-            ):  # Slope should be small (around 0.01-0.02 pH/mV)
+            if abs(PH_SLOPE) > 0.5:  # Slope should be small (around 0.01-0.02 pH/mV)
                 # Warn that the slope is wrong and try to fix it by dividing by 1000
-                _log.warning(
-                    f"PH_SLOPE={PH_SLOPE:.6f} pH/mV unrealistic; scaling /1000 as if pH/V"
-                )
+                _log.warning(f"PH_SLOPE={PH_SLOPE:.6f} pH/mV unrealistic; scaling /1000 as if pH/V")
                 PH_SLOPE = PH_SLOPE / 1000.0  # Convert from pH/V to pH/mV
             # Check again after correction - if still too large, use defaults
             if abs(PH_SLOPE) > 0.5:
-                _log.warning(
-                    "PH_SLOPE still unrealistic; reverting to default."
-                )
+                _log.warning("PH_SLOPE still unrealistic; reverting to default.")
                 # Go back to the safe default values
                 PH_SLOPE = DEFAULT_PH_SLOPE
                 PH_OFFSET = DEFAULT_PH_OFFSET
@@ -170,24 +154,16 @@ def load_calibration(config_path: str | None = None):
 
             # Calculate what pH values we should get at each calibration voltage (for verification)
             # This helps us check if our calibration makes sense
-            ph_at_v4 = (
-                PH_SLOPE * ((v4 - v7) * 1000.0) + PH_OFFSET
-            )  # Expected pH at 4 buffer voltage
-            ph_at_v7 = (
-                PH_SLOPE * 0.0 + PH_OFFSET
-            )  # Expected pH at 7 buffer voltage (should be 7.0)
-            ph_at_v10 = (
-                PH_SLOPE * ((v10 - v7) * 1000.0) + PH_OFFSET
-            )  # Expected pH at 10 buffer voltage
+            ph_at_v4 = PH_SLOPE * ((v4 - v7) * 1000.0) + PH_OFFSET  # Expected pH at 4 buffer voltage
+            ph_at_v7 = PH_SLOPE * 0.0 + PH_OFFSET  # Expected pH at 7 buffer voltage (should be 7.0)
+            ph_at_v10 = PH_SLOPE * ((v10 - v7) * 1000.0) + PH_OFFSET  # Expected pH at 10 buffer voltage
 
             # Log the calibration values we calculated
             _log.info(
                 f"Calibration: slope={PH_SLOPE:.6f} pH/mV, offset={PH_OFFSET:.3f}, center={CENTER_VOLTAGE:.4f} V"
             )
             # Also print to console for immediate feedback
-            print(
-                f"[PH] Calibrated slope={PH_SLOPE:.6f} pH/mV, offset={PH_OFFSET:.3f}, center={CENTER_VOLTAGE:.4f} V"
-            )
+            print(f"[PH] Calibrated slope={PH_SLOPE:.6f} pH/mV, offset={PH_OFFSET:.3f}, center={CENTER_VOLTAGE:.4f} V")
             # Log what pH we predict at each calibration point
             _log.info(
                 f"Predicted pH @ v4={v4:.4f}V -> {ph_at_v4:.3f}, v7={v7:.4f}V -> {ph_at_v7:.3f}, v10={v10:.4f}V -> {ph_at_v10:.3f}"
@@ -198,20 +174,12 @@ def load_calibration(config_path: str | None = None):
             print("[PH] Calibration points missing; using defaults.")
     # Catch specific error if the file doesn't exist
     except FileNotFoundError:
-        _log.warning(
-            f"Calibration file not found at {config_path}; using defaults."
-        )
-        print(
-            f"[PH] Calibration file not found at {config_path}; using defaults."
-        )
+        _log.warning(f"Calibration file not found at {config_path}; using defaults.")
+        print(f"[PH] Calibration file not found at {config_path}; using defaults.")
     # Catch any other error that might occur while loading the file
     except Exception as e:
-        _log.warning(
-            f"Failed to load calibration file {config_path}: {e}; using defaults"
-        )
-        print(
-            f"[PH] Failed to load calibration file {config_path}: {e}; using defaults"
-        )
+        _log.warning(f"Failed to load calibration file {config_path}: {e}; using defaults")
+        print(f"[PH] Failed to load calibration file {config_path}: {e}; using defaults")
 
 
 def _resolve_calib_path(config_path: str | None = None) -> str:
@@ -224,13 +192,7 @@ def _resolve_calib_path(config_path: str | None = None) -> str:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(script_dir, "ph_calibration.json")
 
-
-def calibrate_voltage_for_ph(
-    target_ph: float,
-    samples: int = 20,
-    channel: int = SENSOR_CHANNEL,
-    config_path: str | None = None,
-) -> dict:
+def calibrate_voltage_for_ph(target_ph: float, samples: int = 20, channel: int = SENSOR_CHANNEL, config_path: str | None = None) -> dict:
     """Average 'samples' readings and store the voltage for the given buffer pH.
     Returns basic stats so the caller can display them."""
     cfg_path = _resolve_calib_path(config_path)
@@ -275,10 +237,8 @@ def calibrate_voltage_for_ph(
     with open(cfg_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-    print(
-        f"[PH] Calibrated {key} = {avg_v:.6f} V using {len(volts)} samples "
-        f"(avg pH during sampling: {avg_ph:.3f}) -> {cfg_path}"
-    )
+    print(f"[PH] Calibrated {key} = {avg_v:.6f} V using {len(volts)} samples "
+          f"(avg pH during sampling: {avg_ph:.3f}) -> {cfg_path}")
 
     # Reload calibration to recompute slope/offset and show predictions
     load_calibration(cfg_path)
@@ -289,7 +249,6 @@ def calibrate_voltage_for_ph(
         "samples": int(len(volts)),
     }
 
-
 # Load calibration at module import time (will fall back to defaults)
 load_calibration()
 
@@ -299,24 +258,19 @@ logger = logging.getLogger(__name__)
 
 class PHSensorReader:
     """Reader that uses smbus2 i2c_rdwr to query the Grove Base Hat ADC."""
-
     # __init__ is a special method that runs when we create a new PHSensorReader object
     def __init__(
         self,
         addr: int = 0x08,  # I2C address of the ADC (0x08 is the default for Grove Base Hat)
         busnum: int = 1,  # Which I2C bus to use (1 is the default on Raspberry Pi)
-        center_voltage: (
-            float | None
-        ) = None,  # Optional: override the center voltage
+        center_voltage: float | None = None,  # Optional: override the center voltage
     ):
         # Store the I2C address in the object so we can use it later
         self.addr = addr
         # Store the I2C bus number in the object
         self.busnum = busnum
         # Store the center voltage (use global if not provided, otherwise use the one passed in)
-        self.center_voltage = float(
-            CENTER_VOLTAGE if center_voltage is None else center_voltage
-        )
+        self.center_voltage = float(CENTER_VOLTAGE if center_voltage is None else center_voltage)
 
     def _read_raw_bytes(self, channel: int = 0) -> List[int]:
         # Try to import the smbus2 library (needed for I2C communication)
@@ -362,9 +316,7 @@ class PHSensorReader:
             # Try interpreting with low byte first: combine data[0] and data[1]
             # | is bitwise OR, << 8 means shift left 8 bits, & 0xFFFF keeps only 16 bits
             v0 = (data[0] | (data[1] << 8)) & 0xFFFF
-            candidates.append(
-                ("low_first", v0)
-            )  # Add this interpretation to our list
+            candidates.append(("low_first", v0))  # Add this interpretation to our list
         # If we have all 4 bytes
         if len(data) >= 4:
             # Try middle pair of bytes
@@ -400,9 +352,7 @@ class PHSensorReader:
         slope_used = PH_SLOPE  # Start with the global slope value
         # If the slope is too large, it's probably in wrong units (pH/V instead of pH/mV)
         if abs(slope_used) > 0.5:
-            logger.warning(
-                f"PH_SLOPE seems per-Volt ({slope_used:.6f}); scaling /1000"
-            )
+            logger.warning(f"PH_SLOPE seems per-Volt ({slope_used:.6f}); scaling /1000")
             slope_used = slope_used / 1000.0  # Convert to pH/mV
 
         # Calculate pH using the formula: pH = (slope × voltage_difference) + offset
@@ -419,14 +369,7 @@ class PHSensorReader:
         logger.info(f"[DEBUG] Calculated pH (clamped): {ph:.3f}")
 
         # Return all the information as a dictionary
-        return {
-            "raw": raw,
-            "voltage_v": voltage_v,
-            "voltage_mV": voltage_mV,
-            "ph": ph,
-            "raw_bytes": data,
-            "chosen_method": chosen_method,
-        }
+        return {"raw": raw, "voltage_v": voltage_v, "voltage_mV": voltage_mV, "ph": ph, "raw_bytes": data, "chosen_method": chosen_method}
 
     def read_ph(self, channel: int = 0) -> float:
         # Get all the raw sensor data (including pH)
@@ -461,9 +404,7 @@ class PHSensorReader:
         # If trim is True and we have enough readings (5+), remove outliers
         if trim and len(vals) >= 5:
             vals_sorted = sorted(vals)  # Sort readings from lowest to highest
-            vals = vals_sorted[
-                1:-1
-            ]  # Keep everything except first (lowest) and last (highest)
+            vals = vals_sorted[1:-1]  # Keep everything except first (lowest) and last (highest)
 
         # Calculate and return the average (mean) of all the readings
         return float(statistics.mean(vals))
@@ -471,8 +412,8 @@ class PHSensorReader:
 
 class PHSensor:
     """
-    Simplified pH sensor wrapper class.
-    Main methods: read_ph_sensor() for single reading, read_ph_averaged() for averaged reading.
+    pH sensor wrapper class using the SMBus  reader.
+    Public API is unchanged: `read_ph_sensor()` and `read_ph_averaged()`.
     """
 
     # __init__ runs when we create a new PHSensor object
@@ -480,55 +421,97 @@ class PHSensor:
         """Initialize the pH sensor reader."""
         # Store which channel the sensor is connected to
         self.channel = channel
-        # Create a PHSensorReader instance that does the actual I2C communication
-        self.reader = PHSensorReader()
-        logger.info("pH sensor initialized successfully")
+        # Keep track of the most recent pH reading (start with neutral pH 7.0)
+        self.current_ph = 7.0
+        # Remember the last time we sampled the sensor
+        self.last_sampling_time = time.time()
 
-    def _clamp_ph(self, ph: Optional[float]) -> Optional[float]:
-        """Clamp pH value to valid range (0-14) or return None."""
-        # Helper method to ensure pH stays in valid range
-        if ph is None:
-            return None
-        return max(0.0, min(14.0, ph))
+        # Try to create the low-level sensor reader object
+        try:
+            # Create a PHSensorReader instance that does the actual I2C communication
+            self.sensor = PHSensorReader()
+            # Log that initialization was successful
+            logger.info("pH sensor initialized successfully")
+        # If something goes wrong during initialization, catch the error
+        except Exception as e:
+            # Log the error message
+            logger.error(f"Failed to initialize pH sensor: {e}")
+            # Re-raise the exception so the calling code knows initialization failed
+            raise
 
     def read_ph_sensor(self) -> Optional[float]:
         """Return a single pH reading (float) or None on error."""
         # Try to read the pH value
         try:
             # Get pH reading from the sensor (using the stored channel number)
-            ph = self.reader.read_ph(channel=self.channel)
-            # Clamp to valid range and log the reading
-            ph = self._clamp_ph(ph)
-            if ph is not None:
-                logger.debug(f"pH sensor reading: {ph:.2f}")
+            ph = self.sensor.read_ph(channel=self.channel)
+            # Make sure pH is in valid range (0-14)
+            if ph is None:  # If sensor returned no value
+                return None
+            if ph < 0:  # If pH is negative, set it to 0
+                ph = 0.0
+            elif ph > 14:  # If pH is greater than 14, set it to 14
+                ph = 14.0
+
+            # Log the reading at DEBUG level (lower priority than INFO)
+            logger.debug(f"pH sensor reading: {ph:.2f}")
+            # Store this reading as our current pH
+            self.current_ph = ph
+            # Return the pH value
             return ph
         # If anything goes wrong (sensor disconnected, I2C error, etc.)
         except Exception as e:
+            # Log the error so we know what went wrong
             logger.error(f"Error reading pH sensor: {e}")
+            # Return None to indicate the reading failed
             return None
 
     def read_ph_averaged(
-        self,
-        samples: int = ARRAY_LENGTH,  # How many readings to average (default: 40)
-        delay: float = SAMPLING_INTERVAL,  # Delay between readings (default: 0.02 seconds)
+        self, samples: int = ARRAY_LENGTH,  # How many readings to average (default: 40)
+        delay: float = SAMPLING_INTERVAL  # Delay between readings (default: 0.02 seconds)
     ) -> Optional[float]:
-        """Return averaged pH value from multiple readings."""
+        """Return averaged pH value using the fallback averaging function."""
         # Try to read multiple pH values and average them
         try:
-            # Call the reader's read_average method which takes multiple readings
-            ph = self.reader.read_average(
+            # Call the sensor's read_average method which takes multiple readings
+            ph = self.sensor.read_average(
                 channel=self.channel, samples=samples, delay=delay
             )
-            # Clamp to valid range
-            return self._clamp_ph(ph)
+            # Make sure pH is in valid range (0-14)
+            if ph is None:  # If sensor returned no value
+                return None
+            if ph < 0:  # If pH is negative, set it to 0
+                ph = 0.0
+            elif ph > 14:  # If pH is greater than 14, set it to 14
+                ph = 14.0
+
+            # Store this averaged reading as our current pH
+            self.current_ph = ph
+            # Return the averaged pH value
+            return ph
         # If anything goes wrong during averaging
         except Exception as e:
+            # Log what went wrong
             logger.error(f"Error reading averaged pH: {e}")
+            # Return None to indicate failure
+            return None
+
+    # Backwards-compatible internal helper left in place in case other code calls it
+    def _read_sensor_voltage(self) -> Optional[float]:
+        """Return sensor voltage in millivolts (float) or None on error."""
+        try:
+            raw = self.sensor.read_raw(channel=self.channel)
+            vm = raw.get("voltage_mV")
+            if vm is None:
+                return None
+            return float(vm)
+        except Exception as e:
+            logger.error(f"Error reading sensor voltage: {e}")
             return None
 
 
-# Convenience functions for quick single-use readings
-def read_ph() -> Optional[float]:
+# Convenience function for backwards compatibility
+def read_ph():
     """
     Convenience function to read pH sensor data.
     Creates a temporary sensor instance and returns pH reading.
@@ -538,15 +521,19 @@ def read_ph() -> Optional[float]:
     """
     # Try to read a single pH value
     try:
-        # Create a new PHSensor object and read one pH value
-        return PHSensor().read_ph_sensor()
+        # Create a new PHSensor object
+        sensor = PHSensor()
+        # Read and return one pH value
+        return sensor.read_ph_sensor()
     # If something goes wrong (sensor not connected, I2C error, etc.)
     except Exception as e:
+        # Log what went wrong
         logger.error(f"Failed to read pH sensor: {e}")
+        # Return None to show it failed
         return None
 
 
-def read_ph_averaged() -> Optional[float]:
+def read_ph_averaged():
     """
     Convenience function to read averaged pH sensor data.
     Creates a temporary sensor instance and returns averaged pH reading.
@@ -556,11 +543,17 @@ def read_ph_averaged() -> Optional[float]:
     """
     # Try to read an averaged pH value
     try:
-        # Create a new PHSensor object and take several averaged readings
-        return PHSensor().read_ph_averaged()
+        # Create a new PHSensor object
+        sensor = PHSensor()
+        # Take several readings and average them
+        val = sensor.read_ph_averaged()
+        # Return the averaged value
+        return val
     # If something goes wrong
     except Exception as e:
+        # Log the error
         logger.error(f"Failed to read averaged pH sensor: {e}")
+        # Return None to show it failed
         return None
 
 
@@ -569,35 +562,28 @@ def test_all_channels():
     """Test all ADC channels to find where the sensor signal is connected."""
     print("Testing all ADC channels to find the pH sensor signal...")
     print("Looking for a channel that reads approximately 1.81V\n")
-
+    
     try:
         reader = PHSensorReader()
-
+        
         for channel in range(8):  # Test channels 0-7
             try:
                 raw_data = reader.read_raw(channel)
-                voltage = raw_data["voltage_v"]
-                raw_adc = raw_data["raw"]
-                print(
-                    f"Channel {channel}: Raw ADC = {raw_adc:4d}, Voltage = {voltage:.3f}V"
-                )
-
+                voltage = raw_data['voltage_v']
+                raw_adc = raw_data['raw']
+                print(f"Channel {channel}: Raw ADC = {raw_adc:4d}, Voltage = {voltage:.3f}V")
+                
                 # Check if this might be our pH sensor (around 1.8V)
                 if 1.5 < voltage < 2.2:
-                    print(
-                        f"  *** Channel {channel} might be your pH sensor! ***"
-                    )
-
+                    print(f"  *** Channel {channel} might be your pH sensor! ***")
+                    
             except Exception as e:
                 print(f"Channel {channel}: Error - {e}")
-
+                
     except Exception as e:
         print(f"Error initializing ADC reader: {e}")
-
-    print(
-        "\nIf you found a channel with ~1.81V, update SENSOR_CHANNEL in the code."
-    )
-
+    
+    print("\nIf you found a channel with ~1.81V, update SENSOR_CHANNEL in the code.")
 
 # Test function for standalone execution
 def main():
@@ -671,6 +657,53 @@ if __name__ == "__main__":
 
     logger.info(f"Running module: {os.path.abspath(__file__)}")
     load_calibration()
+
+    import argparse
+    parser = argparse.ArgumentParser(description="pH sensor reader")
+    parser.add_argument(
+        "--show-calib",
+        action="store_true",
+        help="Print the currently loaded calibration and exit",
+    )
+    parser.add_argument(
+        "--test-channels",
+        action="store_true", 
+        help="Test all ADC channels to find the pH sensor signal",
+    )
+    parser.add_argument("--calibrate", type=float, choices=[4.0, 7.0, 10.0],
+                        help="Average readings and store voltage for the given buffer (4, 7, or 10).")
+    parser.add_argument("--samples", type=int, default=40,
+                        help="Number of readings to average during calibration (default: 40).")
+    parser.add_argument("--channel", type=int, default=SENSOR_CHANNEL,
+                        help="ADC channel to use (default: SENSOR_CHANNEL).")
+    parser.add_argument("--calib-path", type=str, default=None,
+                        help="Override path to ph_calibration.json.")
+    args = parser.parse_args()
+
+    if args.calibrate is not None:
+        result = calibrate_voltage_for_ph(args.calibrate, samples=args.samples, channel=args.channel, config_path=args.calib_path)
+        # Exit after calibration
+        print("Loaded calibration values:")
+        print(f"  MODULE FILE      = {os.path.abspath(__file__)}")
+        print(f"  CALIBRATION FILE = {_resolve_calib_path(args.calib_path)}")
+        print(f"  PH_SLOPE         = {PH_SLOPE}")
+        print(f"  PH_OFFSET        = {PH_OFFSET}")
+        print(f"  CENTER_VOLTAGE   = {CENTER_VOLTAGE}")
+        print(f"  AVG PH (CAL)     = {result.get('avg_ph', float('nan')):.3f} over {result.get('samples', 0)} samples")
+        raise SystemExit(0)
+
+    if args.show_calib:
+        print("Loaded calibration values:")
+        print(f"  MODULE FILE      = {os.path.abspath(__file__)}")
+        print(f"  CALIBRATION FILE = {LAST_CALIB_PATH}")
+        print(f"  PH_SLOPE         = {PH_SLOPE}")
+        print(f"  PH_OFFSET        = {PH_OFFSET}")
+        print(f"  CENTER_VOLTAGE   = {CENTER_VOLTAGE}")
+        sys.exit(0)
+        
+    if args.test_channels:
+        test_all_channels()
+        sys.exit(0)
 
     # Temporarily run channel test first, then normal operation
     print("=== RUNNING CHANNEL TEST FIRST ===")
