@@ -4,7 +4,10 @@ Filename: camera_test.py
 Description: Test and report the FPS and resolution of a USB camera using OpenCV.
 Detects available cameras, opens the first working one, and prints its actual settings.
 """
-
+# Create and activate virtual environment
+# python -m venv .venv
+# source .venv/bine/activate
+# pip install opencv-python
 import cv2
 import logging
 import os
