@@ -16,6 +16,7 @@ from logging.handlers import TimedRotatingFileHandler
 from bme680_ts import BME680Sensor
 from liquid_level_sensor_ts import LiquidLevelSensor
 from temp_water_sensor_ts import WaterTemperatureSensor
+from ph_sensor_ts import PHSensor
 
 # Import email notification system
 from email_notification import EmailNotifier, DEFAULT_RECIPIENT_EMAILS
@@ -68,6 +69,7 @@ def read_all_sensors():
         bme_sensor = BME680Sensor()
         liquid_sensor = LiquidLevelSensor()
         water_temp_sensor = WaterTemperatureSensor()
+        ph_sensor = PHSensor()
 
         # Read BME680 sensor data
         temp_f, humidity, pressure_inhg = bme_sensor.read_sensors()
@@ -78,8 +80,22 @@ def read_all_sensors():
         # Read liquid level
         liquid_present = liquid_sensor.read_sensor()
 
+        # Read pH
+        ph_value = ph_sensor.read_ph_sensor()
+
         # Format sensor data
         sensor_data = {
+            "pH": (f"{ph_value:.2f}" if ph_value is not None else "No data"),
+            "Water Temperature": (
+                f"{water_temp_f:.1f} °F"
+                if water_temp_f is not None
+                else "No data"
+            ),
+            "Water Level": (
+                "Normal"
+                if liquid_present == 1
+                else "Low" if liquid_present == 0 else "Unknown"
+            ),
             "Air Temperature": (
                 f"{temp_f:.1f} °F" if temp_f is not None else "No data"
             ),
@@ -91,17 +107,6 @@ def read_all_sensors():
                 if pressure_inhg is not None
                 else "No data"
             ),
-            "Water Temperature": (
-                f"{water_temp_f:.1f} °F"
-                if water_temp_f is not None
-                else "No data"
-            ),
-            "Water Level": (
-                "Normal"
-                if liquid_present == 1
-                else "Low" if liquid_present == 0 else "Unknown"
-            ),
-            "pH": "7.0 (simulated)",  # pH sensor removed - dummy data
         }
 
         # Determine system status

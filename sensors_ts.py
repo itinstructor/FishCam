@@ -2,7 +2,6 @@
 """
 Filename: sensors_ts.py
 Description: Display temperature, pressure, and humidity
-from Bosch bme680 sensor with integrated email notifications
 !Connect to I2C bus
 Press Ctrl+C to exit
 """
