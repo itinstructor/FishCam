@@ -108,7 +108,9 @@ if ENABLE_SCHEDULED_EMAILS:
         if isinstance(DAILY_EMAIL_TIME, list):
             times_descr = ", ".join(DAILY_EMAIL_TIME)
         elif isinstance(DAILY_EMAIL_TIME, str) and "," in DAILY_EMAIL_TIME:
-            times_descr = ", ".join([t.strip() for t in DAILY_EMAIL_TIME.split(",")])
+            times_descr = ", ".join(
+                [t.strip() for t in DAILY_EMAIL_TIME.split(",")]
+            )
         else:
             times_descr = str(DAILY_EMAIL_TIME)
     except Exception:
@@ -154,7 +156,12 @@ def calculate_trimmed_mean(readings, trim_percent=0.1):
 
 # ---------------- GET CURRENT SENSOR DATA FOR EMAIL ----------------------- #
 def get_current_sensor_data_for_email(
-    temp_f, humidity, pressure_inhg, water_temp_f, liquid_present, ph_value=None
+    ph_value,
+    water_temp_f,
+    liquid_present,
+    temp_f,
+    humidity,
+    pressure_inhg,
 ):
     """
     Format current sensor readings for email reports.
@@ -324,7 +331,9 @@ def should_send_daily_email():
     elif isinstance(DAILY_EMAIL_TIME, str):
         # allow comma-separated string like "06:00,18:00"
         if "," in DAILY_EMAIL_TIME:
-            scheduled_times = [t.strip() for t in DAILY_EMAIL_TIME.split(",") if t.strip()]
+            scheduled_times = [
+                t.strip() for t in DAILY_EMAIL_TIME.split(",") if t.strip()
+            ]
         else:
             scheduled_times = [DAILY_EMAIL_TIME.strip()]
     else:
@@ -339,7 +348,9 @@ def should_send_daily_email():
             # skip invalid entries
             continue
 
-        scheduled_time = current_time.replace(hour=h, minute=m, second=0, microsecond=0)
+        scheduled_time = current_time.replace(
+            hour=h, minute=m, second=0, microsecond=0
+        )
 
         # If we haven't sent for this scheduled time today and current time is past it
         last_sent_date = last_daily_email_dates.get(t)
@@ -350,7 +361,12 @@ def should_send_daily_email():
 
 
 def send_daily_summary_email(
-    temp_f, humidity, pressure_inhg, water_temp_f, liquid_present, scheduled_time=None
+    temp_f,
+    humidity,
+    pressure_inhg,
+    water_temp_f,
+    liquid_present,
+    scheduled_time=None,
 ):
     """Send daily summary email."""
     global last_daily_email_date
