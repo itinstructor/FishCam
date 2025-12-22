@@ -9,6 +9,7 @@ Can be called by cron jobs or scheduled tasks
 import sys
 import os
 import logging
+from collections import OrderedDict
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 
@@ -84,30 +85,37 @@ def read_all_sensors():
         ph_value = ph_sensor.read_ph_sensor()
 
         # Format sensor data
-        sensor_data = {
-            "pH": (f"{ph_value:.2f}" if ph_value is not None else "No data"),
-            "Water Temperature": (
-                f"{water_temp_f:.1f} °F"
-                if water_temp_f is not None
-                else "No data"
-            ),
-            "Water Level": (
-                "Normal"
-                if liquid_present == 1
-                else "Low" if liquid_present == 0 else "Unknown"
-            ),
-            "Air Temperature": (
-                f"{temp_f:.1f} °F" if temp_f is not None else "No data"
-            ),
-            "Humidity": (
-                f"{humidity:.1f}%" if humidity is not None else "No data"
-            ),
-            "Pressure": (
-                f"{pressure_inhg:.2f} inHg"
-                if pressure_inhg is not None
-                else "No data"
-            ),
-        }
+        sensor_data = OrderedDict(
+            [
+                ("pH", f"{ph_value:.2f}" if ph_value is not None else "No data"),
+                (
+                    "Water Temperature",
+                    f"{water_temp_f:.1f} °F"
+                    if water_temp_f is not None
+                    else "No data",
+                ),
+                (
+                    "Water Level",
+                    "Normal"
+                    if liquid_present == 1
+                    else "Low" if liquid_present == 0 else "Unknown",
+                ),
+                (
+                    "Air Temperature",
+                    f"{temp_f:.1f} °F" if temp_f is not None else "No data",
+                ),
+                (
+                    "Humidity",
+                    f"{humidity:.1f}%" if humidity is not None else "No data",
+                ),
+                (
+                    "Pressure",
+                    f"{pressure_inhg:.2f} inHg"
+                    if pressure_inhg is not None
+                    else "No data",
+                ),
+            ]
+        )
 
         # Determine system status
         system_status = "Normal"
