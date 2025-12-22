@@ -87,18 +87,25 @@ def read_all_sensors():
         # Format sensor data
         sensor_data = OrderedDict(
             [
-                ("pH", f"{ph_value:.2f}" if ph_value is not None else "No data"),
+                (
+                    "pH",
+                    f"{ph_value:.2f}" if ph_value is not None else "No data",
+                ),
                 (
                     "Water Temperature",
-                    f"{water_temp_f:.1f} °F"
-                    if water_temp_f is not None
-                    else "No data",
+                    (
+                        f"{water_temp_f:.1f} °F"
+                        if water_temp_f is not None
+                        else "No data"
+                    ),
                 ),
                 (
                     "Water Level",
-                    "Normal"
-                    if liquid_present == 1
-                    else "Low" if liquid_present == 0 else "Unknown",
+                    (
+                        "Normal"
+                        if liquid_present == 1
+                        else "Low" if liquid_present == 0 else "Unknown"
+                    ),
                 ),
                 (
                     "Air Temperature",
@@ -110,9 +117,11 @@ def read_all_sensors():
                 ),
                 (
                     "Pressure",
-                    f"{pressure_inhg:.2f} inHg"
-                    if pressure_inhg is not None
-                    else "No data",
+                    (
+                        f"{pressure_inhg:.2f} inHg"
+                        if pressure_inhg is not None
+                        else "No data"
+                    ),
                 ),
             ]
         )
@@ -147,12 +156,12 @@ def read_all_sensors():
     except Exception as e:
         logger.error(f"Error reading sensors: {e}")
         return {
+            "pH": "Error",
+            "Water Temperature": "Error",
+            "Water Level": "Error",
             "Air Temperature": "Error",
             "Humidity": "Error",
             "Pressure": "Error",
-            "Water Temperature": "Error",
-            "Water Level": "Error",
-            "pH": "Error",
         }, "Critical"
 
 
@@ -214,12 +223,12 @@ def send_daily_summary():
         logger.info("Generating daily summary report")
 
         sensor_data, system_status = read_all_sensors()
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now().strftime("%Y-%m-%d")
 
         # Create enhanced daily summary
         email_notifier = EmailNotifier()
 
-        subject = f"[Aquaponics] Daily Summary - {datetime.now().strftime('%Y-%m-%d')}"
+        subject = f"[Aquaponics] Daily Summary - {timestamp}"
 
         # Enhanced message with more details
         message = f"""
