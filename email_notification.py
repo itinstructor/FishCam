@@ -474,25 +474,10 @@ class EmailNotifier:
             subject = f"{SUBJECT_PREFIX} Daily Status Report"
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            # Normalize sensor_data into an ordered list of (name, value) pairs
-            preferred_order = [
-                "pH",
-                "Water Temperature",
-                "Water Level",
-                "Air Temperature",
-                "Humidity",
-                "Pressure",
-            ]
-
+            # Normalize sensor_data into an ordered list of (name, value) pairs.
+            # Python 3.7+ preserves dict insertion order, so we keep exactly what the caller provides.
             if isinstance(sensor_data, dict):
-                # First, take any keys that match the preferred order in that exact sequence
-                ordered_items = [
-                    (k, sensor_data[k]) for k in preferred_order if k in sensor_data
-                ]
-                # Then append any remaining keys in their original insertion order
-                for k, v in sensor_data.items():
-                    if k not in preferred_order:
-                        ordered_items.append((k, v))
+                ordered_items = list(sensor_data.items())
             else:
                 # Accept list/tuple of pairs or any iterable already in desired order
                 ordered_items = list(sensor_data)
