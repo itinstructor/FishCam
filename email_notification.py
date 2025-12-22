@@ -455,7 +455,7 @@ class EmailNotifier:
         Args:
             recipient_email (str or list): Email address(es) to send report to.
                                          If None, uses DEFAULT_RECIPIENT_EMAILS
-            sensor_data (dict): Current sensor readings
+            sensor_data (dict or iterable): Current sensor readings
             system_status (str): Overall system status
 
         Returns:
@@ -474,11 +474,16 @@ class EmailNotifier:
             subject = f"{SUBJECT_PREFIX} Daily Status Report"
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+            # Normalize sensor_data into an ordered list of (name, value) pairs
+            if isinstance(sensor_data, dict):
+                ordered_items = list(sensor_data.items())
+            else:
+                # Accept list/tuple of pairs or any iterable already in desired order
+                ordered_items = list(sensor_data)
+
             # Load HTML template and build content
             html_template = self._load_html_template("status_report.html")
             if html_template:
-                # Preserve incoming order of sensor_data
-                ordered_items = list(sensor_data.items())
 
                 # Generate sensor data table rows
                 sensor_rows = ""
@@ -511,7 +516,6 @@ class EmailNotifier:
     <h3>Current Readings:</h3>
     <ul>
 """
-                ordered_items = list(sensor_data.items())
 
                 for sensor, value in ordered_items:
                     html_message += f"        <li>{sensor}: {value}</li>\n"
