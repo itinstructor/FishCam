@@ -12,6 +12,7 @@ import os
 import re
 from datetime import datetime
 from time import sleep
+from collections import OrderedDict
 
 # pip install requests
 import requests
@@ -156,12 +157,12 @@ def calculate_trimmed_mean(readings, trim_percent=0.1):
 
 # ---------------- GET CURRENT SENSOR DATA FOR EMAIL ----------------------- #
 def get_current_sensor_data_for_email(
-    ph_value,
-    water_temp_f,
-    liquid_present,
     temp_f,
     humidity,
     pressure_inhg,
+    water_temp_f,
+    liquid_present,
+    ph_value=None,
 ):
     """
     Format current sensor readings for email reports.
@@ -186,30 +187,40 @@ def get_current_sensor_data_for_email(
                 ph_value = 7.0  # Default neutral pH
 
         # Format sensor data
-        sensor_data = {
-            "Air Temperature": (
-                f"{temp_f:.1f} °F" if temp_f is not None else "No data"
-            ),
-            "Humidity": (
-                f"{humidity:.1f}%" if humidity is not None else "No data"
-            ),
-            "Pressure": (
-                f"{pressure_inhg:.2f} inHg"
-                if pressure_inhg is not None
-                else "No data"
-            ),
-            "Water Temperature": (
-                f"{water_temp_f:.1f} °F"
-                if water_temp_f is not None
-                else "No data"
-            ),
-            "Water Level": (
-                "Normal"
-                if liquid_present == 1
-                else "Low" if liquid_present == 0 else "Unknown"
-            ),
-            "pH": f"{ph_value:.1f}" if ph_value is not None else "No data",
-        }
+        sensor_data = OrderedDict(
+            [
+                (
+                    "pH",
+                    f"{ph_value:.1f}" if ph_value is not None else "No data",
+                ),
+                (
+                    "Water Temperature",
+                    f"{water_temp_f:.1f} °F"
+                    if water_temp_f is not None
+                    else "No data",
+                ),
+                (
+                    "Water Level",
+                    "Normal"
+                    if liquid_present == 1
+                    else "Low" if liquid_present == 0 else "Unknown",
+                ),
+                (
+                    "Air Temperature",
+                    f"{temp_f:.1f} °F" if temp_f is not None else "No data",
+                ),
+                (
+                    "Humidity",
+                    f"{humidity:.1f}%" if humidity is not None else "No data",
+                ),
+                (
+                    "Pressure",
+                    f"{pressure_inhg:.2f} inHg"
+                    if pressure_inhg is not None
+                    else "No data",
+                ),
+            ]
+        )
 
         # Determine system status
         system_status = "Normal"
