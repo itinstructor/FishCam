@@ -30,8 +30,7 @@ DEFAULT_RECIPIENT_EMAILS = [
     "williamaloring@gmail.com",
     "williamloring@hotmail.com",
     "sarah.trook31@gmail.com",
-    "zakwest85@gmail.com",
-    "arood2016@icloud.com"
+    "zakwest85@gmail.com"
 ]
 
 # Email template constants
