@@ -27,10 +27,10 @@ DEFAULT_SENDER_PASSWORD = (
 
 # Multiple recipients - add more email addresses here
 DEFAULT_RECIPIENT_EMAILS = [
-    "williamaloring@gmail.com",
     "williamloring@hotmail.com",
-    "sarah.trook31@gmail.com",
-    "zakwest85@gmail.com"
+    "loringw@wncc.edu",
+    "westz41@wncc.edu",
+    "trooks1@wncc.edu",
 ]
 
 # Email template constants
