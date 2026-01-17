@@ -26,6 +26,9 @@ from config import (
     HTML_TEMPLATE_DIR, ALERT_EMAIL_TEMPLATE, STATUS_REPORT_TEMPLATE
 )
 
+# NA (Not Available) display string for missing sensor readings
+NA_DISPLAY = "NA"
+
 # --------------------------- LOGGING SETUP -------------------------------- #
 # Configure logging for this module when imported or run standalone
 # This ensures email events are always logged to the appropriate log file
@@ -465,10 +468,10 @@ class EmailNotifier:
             # Default sensor data if none provided
             if sensor_data is None:
                 sensor_data = {
-                    "Temperature": "No data",
-                    "Humidity": "No data",
-                    "pH": "No data",
-                    "Water Temperature": "No data",
+                    "Temperature": NA_DISPLAY,
+                    "Humidity": NA_DISPLAY,
+                    "pH": NA_DISPLAY,
+                    "Water Temperature": NA_DISPLAY,
                 }
 
             subject = f"{SUBJECT_PREFIX} Daily Status Report"

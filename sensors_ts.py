@@ -36,6 +36,15 @@ from config import (
     DEFAULT_RECIPIENT_EMAILS,
 )
 
+# NA (Not Available) constants for missing sensor readings
+NA_TEMPERATURE = 0.0
+NA_HUMIDITY = 0.0
+NA_PRESSURE = 0.0
+NA_WATER_TEMP = 0.0
+NA_PH = 7.0  # Default to neutral pH
+NA_LIQUID_LEVEL = 0  # Default to no liquid present
+NA_DISPLAY = "NA"  # Display string for email reports
+
 # Configure logging
 from logging.handlers import TimedRotatingFileHandler
 
@@ -186,14 +195,14 @@ def get_current_sensor_data_for_email(
             [
                 (
                     "pH",
-                    f"{ph_value:.1f}" if ph_value is not None else "No data",
+                    f"{ph_value:.1f}" if ph_value is not None else NA_DISPLAY,
                 ),
                 (
                     "Water Temperature",
                     (
                         f"{water_temp_f:.1f} °F"
                         if water_temp_f is not None
-                        else "No data"
+                        else NA_DISPLAY
                     ),
                 ),
                 (
@@ -206,18 +215,18 @@ def get_current_sensor_data_for_email(
                 ),
                 (
                     "Air Temperature",
-                    f"{temp_f:.1f} °F" if temp_f is not None else "No data",
+                    f"{temp_f:.1f} °F" if temp_f is not None else NA_DISPLAY,
                 ),
                 (
                     "Humidity",
-                    f"{humidity:.1f}%" if humidity is not None else "No data",
+                    f"{humidity:.1f}%" if humidity is not None else NA_DISPLAY,
                 ),
                 (
                     "Pressure",
                     (
                         f"{pressure_inhg:.2f} inHg"
                         if pressure_inhg is not None
-                        else "No data"
+                        else NA_DISPLAY
                     ),
                 ),
             ]
@@ -503,16 +512,16 @@ def main():
                     # Read pH sensor using the abstracted module
                     ph = ph_sensor.read_ph_sensor()
                     if ph is None:
-                        ph = 7.0  # Default to neutral pH if sensor fails
+                        ph = NA_PH
                         logger.warning(
-                            "Failed to read pH sensor, using default value 7.0"
+                            f"Failed to read pH sensor, using NA value {NA_PH}"
                         )
 
                     # ------------ READ LIQUID LEVEL SENSOR ---------------- #
                     # Read liquid level sensor before sending to ThingSpeak
                     liquid_present = liquid_level_sensor.read_sensor()
                     if liquid_present is None:
-                        liquid_present = 0  # Default to no liquid if error
+                        liquid_present = NA_LIQUID_LEVEL
 
                     # Check for water level changes (email alerts)
                     if ENABLE_SCHEDULED_EMAILS:
@@ -556,9 +565,9 @@ def main():
                         if current_water_temp is not None:
                             avg_water_temp = current_water_temp
                         else:
-                            avg_water_temp = 0
+                            avg_water_temp = NA_WATER_TEMP
                             logger.warning(
-                                "No water temperature readings available for averaging"
+                                f"No water temperature readings available for averaging, using NA value {NA_WATER_TEMP}"
                             )
 
                     # Average pH (only if we have readings)
@@ -570,16 +579,16 @@ def main():
                         if current_ph is not None:
                             avg_ph = current_ph
                         else:
-                            avg_ph = 7.0  # Default to neutral pH
+                            avg_ph = NA_PH
                             logger.warning(
-                                "No pH readings available for averaging, using default 7.0"
+                                f"No pH readings available for averaging, using NA value {NA_PH}"
                             )
 
                     # -------------- READ LIQUID LEVEL SENSOR -------------- #
                     # Read liquid level sensor before sending to ThingSpeak
                     liquid_present = liquid_level_sensor.read_sensor()
                     if liquid_present is None:
-                        liquid_present = 0  # Default to no liquid if error
+                        liquid_present = NA_LIQUID_LEVEL
 
                     # Check for water level changes (email alerts)
                     if ENABLE_SCHEDULED_EMAILS:
