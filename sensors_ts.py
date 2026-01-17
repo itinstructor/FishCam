@@ -161,7 +161,7 @@ def get_current_sensor_data_for_email(
     humidity,
     pressure_inhg,
     water_temp_f,
-    liquid_present,
+    liquid_present = 1,
     ph_value=None,
 ):
     """
