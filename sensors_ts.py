@@ -161,7 +161,7 @@ def get_current_sensor_data_for_email(
     humidity,
     pressure_inhg,
     water_temp_f,
-    liquid_present = 1,
+    liquid_present = None,
     ph_value=None,
 ):
     """
@@ -180,11 +180,9 @@ def get_current_sensor_data_for_email(
         str: System status
     """
     try:
-        # Get pH reading if not provided
-        if ph_value is None:
-            ph_value = ph_sensor.read_ph_sensor()
-            if ph_value is None:
-                ph_value = 7.0  # Default neutral pH
+        
+        if liquid_present is None:
+            liquid_present = 1  # Default neutral pH
 
         # Format sensor data
         sensor_data = OrderedDict(
