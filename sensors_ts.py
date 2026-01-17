@@ -161,7 +161,7 @@ def get_current_sensor_data_for_email(
     humidity,
     pressure_inhg,
     water_temp_f,
-    liquid_present = None,
+    liquid_present=None,
     ph_value=None,
 ):
     """
@@ -180,9 +180,6 @@ def get_current_sensor_data_for_email(
         str: System status
     """
     try:
-        
-        if liquid_present is None:
-            liquid_present = 1  # Default neutral pH
 
         # Format sensor data
         sensor_data = OrderedDict(
@@ -193,15 +190,19 @@ def get_current_sensor_data_for_email(
                 ),
                 (
                     "Water Temperature",
-                    f"{water_temp_f:.1f} °F"
-                    if water_temp_f is not None
-                    else "No data",
+                    (
+                        f"{water_temp_f:.1f} °F"
+                        if water_temp_f is not None
+                        else "No data"
+                    ),
                 ),
                 (
                     "Water Level",
-                    "Normal"
-                    if liquid_present == 1
-                    else "Low" if liquid_present == 0 else "Unknown",
+                    (
+                        "Normal"
+                        if liquid_present == 0
+                        else "Low" if liquid_present == 2 else "Unknown"
+                    ),
                 ),
                 (
                     "Air Temperature",
@@ -213,9 +214,11 @@ def get_current_sensor_data_for_email(
                 ),
                 (
                     "Pressure",
-                    f"{pressure_inhg:.2f} inHg"
-                    if pressure_inhg is not None
-                    else "No data",
+                    (
+                        f"{pressure_inhg:.2f} inHg"
+                        if pressure_inhg is not None
+                        else "No data"
+                    ),
                 ),
             ]
         )
