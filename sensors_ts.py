@@ -42,7 +42,7 @@ NA_HUMIDITY = 0.0
 NA_PRESSURE = 0.0
 NA_WATER_TEMP = 0.0
 NA_PH = 7.0  # Default to neutral pH
-NA_LIQUID_LEVEL = 0  # Default to no liquid present
+NA_LIQUID_LEVEL = -1  # Use -1 to distinguish from actual sensor readings (0=no liquid, 1=liquid present)
 NA_DISPLAY = "NA"  # Display string for email reports
 
 # Configure logging
@@ -185,8 +185,7 @@ def get_current_sensor_data_for_email(
         ph_value: pH reading (optional, defaults to reading from sensor)
 
     Returns:
-        dict: Formatted sensor data
-        str: System status
+        tuple: (sensor_data dict, system_status str, status_description str)
     """
     try:
 
@@ -209,8 +208,8 @@ def get_current_sensor_data_for_email(
                     "Water Level",
                     (
                         "Normal"
-                        if liquid_present == 0
-                        else "Low" if liquid_present == 2 else "Unknown"
+                        if liquid_present == 1
+                        else "Low" if liquid_present == 0 else NA_DISPLAY
                     ),
                 ),
                 (
@@ -232,18 +231,43 @@ def get_current_sensor_data_for_email(
             ]
         )
 
-        # Determine system status
+        # Determine system status and description
         system_status = "Normal"
+        status_description = ""
+        
         if liquid_present == 0:
+            # Actual sensor reading: no liquid detected (Critical condition)
             system_status = "Critical"
-        elif temp_f is None or humidity is None or water_temp_f is None:
+            status_description = "🚨 Water level is critically low. Immediate attention required!"
+        elif liquid_present == -1:
+            # NA value: no reading available (Warning condition)
             system_status = "Warning"
+            status_description = "⚠️ Water level sensor not reporting readings."
+        
+        if temp_f is None or humidity is None or water_temp_f is None:
+            if system_status == "Normal":
+                system_status = "Warning"
+                status_description = ""
+            missing_sensors = []
+            if temp_f is None:
+                missing_sensors.append("Air Temperature")
+            if humidity is None:
+                missing_sensors.append("Humidity")
+            if water_temp_f is None:
+                missing_sensors.append("Water Temperature")
+            desc = f"⚠️ Missing sensor data: {', '.join(missing_sensors)}."
+            if status_description:
+                status_description += " " + desc
+            else:
+                status_description = desc
         elif water_temp_f is not None and (
             water_temp_f < 65 or water_temp_f > 85
         ):
-            system_status = "Warning"
+            if system_status == "Normal":
+                system_status = "Warning"
+                status_description = f"⚠️ Water temperature ({water_temp_f:.1f}°F) is outside optimal range (65-85°F)."
 
-        return sensor_data, system_status
+        return sensor_data, system_status, status_description
 
     except Exception as e:
         logger.error(f"Error formatting sensor data for email: {e}")
@@ -254,7 +278,7 @@ def get_current_sensor_data_for_email(
             "Water Temperature": "Error",
             "Water Level": "Error",
             "pH": "Error",
-        }, "Critical"
+        }, "Critical", "System error while formatting sensor data."
 
 
 #
@@ -290,7 +314,7 @@ def check_water_level_change(
             # Get current pH reading for email
             current_ph = ph_sensor.read_ph_sensor()
 
-            sensor_data, system_status = get_current_sensor_data_for_email(
+            sensor_data, system_status, status_description = get_current_sensor_data_for_email(
                 temp_f,
                 humidity,
                 pressure_inhg,
@@ -397,7 +421,7 @@ def send_daily_summary_email(
         # Get current pH reading for email
         current_ph = ph_sensor.read_ph_sensor()
 
-        sensor_data, system_status = get_current_sensor_data_for_email(
+        sensor_data, system_status, status_description = get_current_sensor_data_for_email(
             temp_f,
             humidity,
             pressure_inhg,
@@ -410,6 +434,7 @@ def send_daily_summary_email(
             recipient_email=None,  # Uses DEFAULT_RECIPIENT_EMAILS for multiple recipients
             sensor_data=sensor_data,
             system_status=system_status,
+            status_description=status_description,
         )
 
         if success:

@@ -451,6 +451,7 @@ class EmailNotifier:
         recipient_email=None,
         sensor_data=None,
         system_status="Normal",
+        status_description="",
     ):
         """
         Send a system status report email.
@@ -460,6 +461,7 @@ class EmailNotifier:
                                          If None, uses DEFAULT_RECIPIENT_EMAILS
             sensor_data (dict or iterable): Current sensor readings
             system_status (str): Overall system status
+            status_description (str): Description of warning or critical status
 
         Returns:
             bool: True if report sent successfully, False otherwise
@@ -500,23 +502,32 @@ class EmailNotifier:
 
                 # Set status color
                 status_color = "#4caf50" if system_status == "Normal" else "#f44336"
+                
+                # Build status description HTML section if provided
+                status_description_html = ""
+                if status_description:
+                    status_description_html = f'<div style="margin-top: 15px; padding: 10px; background-color: #fff3cd; border-left: 4px solid {status_color}; color: #856404;"><strong>{status_description}</strong></div>'
 
                 # Replace placeholders in template
                 html_message = html_template.format(
                     timestamp=timestamp,
                     system_status=system_status,
                     status_color=status_color,
+                    status_description=status_description_html,
                     sensor_data_rows=sensor_rows
                 )
             else:
                 # Fallback HTML if template loading fails
                 status_color = "#4caf50" if system_status == "Normal" else "#f44336"
+                status_desc_html = f'<p style="color: {status_color}; font-weight: bold;">{status_description}</p>' if status_description else ''
+                
                 html_message = f"""
 <html>
 <body style="font-family: Arial, sans-serif;">
     <h2>WNCC Aquaponics Status Report</h2>
     <p><strong>Report Generated:</strong> {timestamp}</p>
     <p><strong>System Status:</strong> <span style="color: {status_color};">{system_status}</span></p>
+    {status_desc_html}
     <h3>Current Readings:</h3>
     <ul>
 """
